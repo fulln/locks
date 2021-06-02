@@ -11,13 +11,15 @@ public interface LockDomain {
 
     /**
      * 获取锁
+     *
      * @return 是否成功
      */
-    boolean tryLock();
+    boolean tryLock(String key);
 
     /**
      * 释放锁
+     *
      * @return 是否成功
      */
-    boolean releaseLock();
+    boolean releaseLock(String key);
 }

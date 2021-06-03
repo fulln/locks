@@ -26,14 +26,6 @@ public class LockModule implements ApplicationContextAware {
         return lockMaps.get(lockEnum.beanName);
     }
 
-    public LockDomain selectLock() {
-        return lockMaps.get(LockEnum.findByCode(1).beanName);
-    }
-
-    public LockDomain selectReenterLock() {
-        return lockMaps.get("mysqlLockService");
-    }
-
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.lockMaps = applicationContext.getBeansOfType(LockDomain.class);

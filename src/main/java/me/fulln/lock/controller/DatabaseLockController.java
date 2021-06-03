@@ -3,6 +3,7 @@ package me.fulln.lock.controller;
 import me.fulln.lock.enums.LockEnum;
 import me.fulln.lock.module.LockModule;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,6 +23,8 @@ public class DatabaseLockController {
     @Autowired
     private LockModule module;
 
+
+    @Retryable(interceptor = "retryLockInterceptor")
     @GetMapping("/tryLock")
     public String getLock(@RequestParam("key") String key,
                           @RequestParam(value = "version", required = false) String version) {
@@ -29,6 +32,7 @@ public class DatabaseLockController {
         return String.format("锁获取状态 key=%s->version=【%s】", key, b);
     }
 
+    @Retryable(interceptor = "retryLockInterceptor")
     @GetMapping("/releaseLock")
     public String releaseLock(@RequestParam("key") String key,
                               @RequestParam(value = "version", required = false) String version) {

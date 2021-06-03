@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
  **/
 @Slf4j
 @Service
-public class MysqlLockService implements LockDomain {
+public class MysqlLockReenterService implements LockDomain {
 
     /**
      * 最大重试次数
@@ -40,8 +40,23 @@ public class MysqlLockService implements LockDomain {
     @Override
     public String tryLock(String key, String version) {
         try {
-            MysqlLock lock = new MysqlLock(key);
-            return String.valueOf(mysqlLockDao.insert(lock) > 0);
+            var lock = new MysqlLock(key);
+            int insert;
+            if (StringUtils.isNotBlank(version)) {
+                lock.setVersion(version);
+                UpdateWrapper<MysqlLock> update = new UpdateWrapper<>();
+                update.lambda()
+                        .setSql("times = times + 1")
+                        .eq(MysqlLock::getLockKey, key)
+                        .eq(MysqlLock::getDeleteFlag, false)
+                        .eq(MysqlLock::getVersion, version);
+                insert = mysqlLockDao.update(null, update);
+            } else {
+                insert = mysqlLockDao.insert(lock);
+            }
+            if (insert > 0) {
+                return lock.getVersion();
+            }
         } catch (DuplicateKeyException e) {
             log.error("[数据库重入锁失败！],KEY={},插入数据库失败，锁已被获取", key);
         }
@@ -60,9 +75,15 @@ public class MysqlLockService implements LockDomain {
             MDC.put(key, NumberUtils.toInt(MDC.get(key), 0) + "");
             UpdateWrapper<MysqlLock> update = new UpdateWrapper<>();
             update.lambda()
+                    .setSql(StringUtils.isNotBlank(version), "times = times - 1")
+                    .setSql(StringUtils.isNotBlank(version), "`delete_flag`= CASE WHEN `times` > 0 THEN  0 ELSE 1 END")
                     .setSql(StringUtils.isBlank(version), "delete_flag = 1")
-                    .eq(MysqlLock::getLockKey, key);
-            return mysqlLockDao.update(null, update) > 0;
+                    .eq(MysqlLock::getLockKey, key)
+                    .eq(MysqlLock::getDeleteFlag, false)
+                    .eq(MysqlLock::getVersion, version);
+            boolean b = mysqlLockDao.update(null, update) > 0;
+            MDC.clear();
+            return b;
         } catch (Exception e) {
             log.error("[数据库重入锁释放失败！],KEY={},version={}", key, version);
             int i = NumberUtils.toInt(MDC.get(key), 0);

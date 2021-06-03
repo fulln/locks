@@ -20,6 +20,8 @@ public class MysqlLock implements Serializable {
     private String lockKey;
     private Integer times;
     private Integer timeout;
+    private String version;
+    private Boolean deleteFlag;
     private String val;
     private Date createTime;
     private Date updateTime;
@@ -28,7 +30,9 @@ public class MysqlLock implements Serializable {
         this.lockKey = key;
         this.val = "123";
         this.timeout = 3;
+        this.version = System.currentTimeMillis() + "";
         this.times = 1;
+        this.deleteFlag = false;
         this.createTime = new Date();
         this.updateTime = new Date();
     }

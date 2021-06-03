@@ -1,9 +1,11 @@
 package me.fulln.lock.controller;
 
+import me.fulln.lock.enums.LockEnum;
 import me.fulln.lock.module.LockModule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -21,9 +23,17 @@ public class DatabaseLockController {
     private LockModule module;
 
     @GetMapping("/tryLock")
-    public String getLock(String key) {
-        boolean b = module.selectLock().tryLock(key);
-        return String.format("锁获取状态 key=%s->【%s】", key, b);
+    public String getLock(@RequestParam("key") String key,
+                          @RequestParam(value = "version", required = false) String version) {
+        String b = module.selectLock(LockEnum.MYSQL_REENTER_LOCK).tryLock(key, version);
+        return String.format("锁获取状态 key=%s->version=【%s】", key, b);
+    }
+
+    @GetMapping("/releaseLock")
+    public String releaseLock(@RequestParam("key") String key,
+                              @RequestParam(value = "version", required = false) String version) {
+        Boolean b = module.selectLock(LockEnum.MYSQL_REENTER_LOCK).releaseLock(key, version);
+        return String.format("锁释放状态 key=%s-> state=【%s】", key, b);
     }
 
 

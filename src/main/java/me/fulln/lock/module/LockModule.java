@@ -1,6 +1,7 @@
 package me.fulln.lock.module;
 
 import me.fulln.lock.domain.LockDomain;
+import me.fulln.lock.enums.LockEnum;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -20,11 +21,16 @@ public class LockModule implements ApplicationContextAware {
 
     private Map<String, LockDomain> lockMaps;
 
-    public LockDomain selectLock(String type) {
-        return lockMaps.get(type);
+
+    public LockDomain selectLock(LockEnum lockEnum) {
+        return lockMaps.get(lockEnum.beanName);
     }
 
     public LockDomain selectLock() {
+        return lockMaps.get(LockEnum.findByCode(1).beanName);
+    }
+
+    public LockDomain selectReenterLock() {
         return lockMaps.get("mysqlLockService");
     }
 

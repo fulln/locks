@@ -14,12 +14,13 @@ public interface LockDomain {
      *
      * @return 是否成功
      */
-    boolean tryLock(String key);
+
+    String tryLock(String key, String version);
 
     /**
      * 释放锁
      *
      * @return 是否成功
      */
-    boolean releaseLock(String key);
+    boolean releaseLock(String key, String version);
 }

@@ -4,6 +4,8 @@ import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.retry.interceptor.RetryOperationsInterceptor;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 /**
  * @author fulln
  * @version 0.0.1
@@ -13,6 +15,8 @@ import org.springframework.stereotype.Component;
  **/
 @Component
 public class RetryLockInterceptor extends RetryOperationsInterceptor {
+
+    private ConcurrentLinkedQueue<String> concurrentLinkedQueue;
 
     /**
      * 做重试的拦截,在这里进行串行化操作

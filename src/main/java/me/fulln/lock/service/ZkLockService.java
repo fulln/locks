@@ -9,6 +9,8 @@ import org.apache.zookeeper.ZooKeeper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 /**
  * @author fulln
  * @version 0.0.1
@@ -22,7 +24,6 @@ public class ZkLockService implements LockDomain {
 
     @Autowired
     private ZooKeeper zooKeeper;
-
     /**
      * 获取锁
      *
@@ -33,10 +34,19 @@ public class ZkLockService implements LockDomain {
     @Override
     public String tryLock(String key, String version) {
         try {
-            return zooKeeper.create(String.format("/%s", key),
-                    "lock".getBytes(),
-                    ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                    CreateMode.EPHEMERAL_SEQUENTIAL);
+            String realKey = String.format("/%s-", key);
+
+            if (zooKeeper.exists(realKey, false) != null) {
+                return null;
+            } else {
+
+                String path = zooKeeper.create(realKey,
+                        "lock".getBytes(),
+                        ZooDefs.Ids.OPEN_ACL_UNSAFE,
+                        CreateMode.EPHEMERAL_SEQUENTIAL);
+                List<String> children = zooKeeper.getChildren(realKey, false);
+            }
+
         } catch (KeeperException | InterruptedException e) {
             log.error("【创建持久化节点异常】{},{}", key, e);
         }

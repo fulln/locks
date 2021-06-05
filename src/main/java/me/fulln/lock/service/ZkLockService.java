@@ -2,6 +2,7 @@ package me.fulln.lock.service;
 
 import lombok.extern.slf4j.Slf4j;
 import me.fulln.lock.domain.LockDomain;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
@@ -24,6 +25,7 @@ public class ZkLockService implements LockDomain {
 
     @Autowired
     private ZooKeeper zooKeeper;
+
     /**
      * 获取锁
      *
@@ -32,19 +34,28 @@ public class ZkLockService implements LockDomain {
      * @return 是否成功
      */
     @Override
-    public String tryLock(String key, String version) {
+    public synchronized String tryLock(String key, String version) {
         try {
-            String realKey = String.format("/%s-", key);
+            //设置版本号
+            version = StringUtils.defaultString(version, String.format("%d", System.currentTimeMillis()));
 
+            String realKey = String.format("/%s-", key);
             if (zooKeeper.exists(realKey, false) != null) {
+                log.warn("已经在zk里面加上了锁，当前持有者为{}", version);
                 return null;
             } else {
-
-                String path = zooKeeper.create(realKey,
-                        "lock".getBytes(),
+                zooKeeper.create(realKey,
+                        version.getBytes(),
                         ZooDefs.Ids.OPEN_ACL_UNSAFE,
                         CreateMode.EPHEMERAL_SEQUENTIAL);
-                List<String> children = zooKeeper.getChildren(realKey, false);
+
+                log.info("节点{}创建成功,开始判断是否获取到对应的锁", realKey);
+
+                List<String> children = zooKeeper.getChildren(realKey, true);
+
+//                children.stream().collect(Collectors.collectingAndThen())
+
+
             }
 
         } catch (KeeperException | InterruptedException e) {

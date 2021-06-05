@@ -32,7 +32,7 @@ public class DatabaseLockController {
     @GetMapping("/tryLock")
     public String getLock(@RequestParam("key") String key,
                           @RequestParam(value = "version", required = false) String version) {
-        String b = module.selectLock(LockEnum.MYSQL_REENTER_LOCK).tryLock(key, version);
+        String b = module.selectLock(LockEnum.ZOOKEEPER_LOCK).tryLock(key, version);
         if (b == null) {
             log.error("未能获取到对应锁");
             throw RetryException.getInstance(key);
@@ -45,7 +45,7 @@ public class DatabaseLockController {
     @GetMapping("/releaseLock")
     public String releaseLock(@RequestParam("key") String key,
                               @RequestParam(value = "version", required = false) String version) {
-        Boolean b = module.selectLock(LockEnum.MYSQL_REENTER_LOCK).releaseLock(key, version);
+        Boolean b = module.selectLock(LockEnum.ZOOKEEPER_LOCK).releaseLock(key, version);
         return String.format("锁释放状态 key=%s-> state=【%s】", key, b);
     }
 

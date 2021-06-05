@@ -1,4 +1,6 @@
 spring:
+    redis:
+        host: localhost
     datasource:
         driver-class-name: com.mysql.cj.jdbc.Driver
         url: jdbc:mysql://localhost:3306/api?useUnicode=true&characterEncoding=UTF8
@@ -7,3 +9,6 @@ spring:
 mybatis:
     configuration:
         map-underscore-to-camel-case: true
+zookeeper:
+    address: 127.0.0.1:2181
+    timeout: 3000

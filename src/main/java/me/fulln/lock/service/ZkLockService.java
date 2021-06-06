@@ -3,14 +3,16 @@ package me.fulln.lock.service;
 import lombok.extern.slf4j.Slf4j;
 import me.fulln.lock.domain.LockDomain;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
-import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author fulln
@@ -23,11 +25,13 @@ import java.util.List;
 @Component
 public class ZkLockService implements LockDomain {
 
-    @Autowired
     private ZooKeeper zooKeeper;
 
+    @Autowired
+    private CuratorFramework client;
+
     /**
-     * 获取锁
+     * 获取锁，非重入
      *
      * @param key
      * @param version
@@ -37,32 +41,36 @@ public class ZkLockService implements LockDomain {
     public synchronized String tryLock(String key, String version) {
         try {
             //设置版本号
-            version = StringUtils.defaultString(version, String.format("%d", System.currentTimeMillis()));
+            version = StringUtils.defaultString(version, String.format("%d", System.currentTimeMillis() / 1000));
 
-            String realKey = String.format("/%s-", key);
-            if (zooKeeper.exists(realKey, false) != null) {
+            var stat = client.checkExists().forPath("/" + key);
+            if (stat != null) {
                 log.warn("已经在zk里面加上了锁，当前持有者为{}", version);
                 return null;
             } else {
-                zooKeeper.create(realKey,
-                        version.getBytes(),
-                        ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                        CreateMode.EPHEMERAL_SEQUENTIAL);
+                var s = client.create()
+                        .withMode(CreateMode.EPHEMERAL)
+                        .withACL(ZooDefs.Ids.OPEN_ACL_UNSAFE)
+                        .forPath("/" + key, version.getBytes());
 
-                log.info("节点{}创建成功,开始判断是否获取到对应的锁", realKey);
+                log.info("节点{}创建成功,开始判断是否获取到对应的锁={}", key, s);
 
-                List<String> children = zooKeeper.getChildren(realKey, true);
+                var children = client.getChildren().forPath(s)
+                        .stream().sorted().collect(Collectors.toList());
+                if (CollectionUtils.isEmpty(children)) {
+                    return version;
+                }
 
-//                children.stream().collect(Collectors.collectingAndThen())
-
-
+                if (key.equals(children.stream().findFirst().get())) {
+                    return version;
+                }
             }
-
-        } catch (KeeperException | InterruptedException e) {
+        } catch (Exception e) {
             log.error("【创建持久化节点异常】{},{}", key, e);
         }
         return null;
     }
+
 
     /**
      * 释放锁
@@ -74,12 +82,15 @@ public class ZkLockService implements LockDomain {
     @Override
     public boolean releaseLock(String key, String version) {
         try {
-            //version参数指定要更新的数据的版本, 如果version和真实的版本不同, 更新操作将失败. 指定version为-1则忽略版本检查
-            zooKeeper.delete(String.format("/%s", key), -1);
-            return true;
+            var stat = client.checkExists().forPath("/" + key);
+            if (stat != null) {
+                //version参数指定要更新的数据的版本, 如果version和真实的版本不同, 更新操作将失败. 指定version为-1则忽略版本检查
+                client.delete().withVersion(NumberUtils.toInt(version, -1)).forPath("/" + key);
+                return true;
+            }
         } catch (Exception e) {
-            log.error("【删除持久化节点异常】{},{}", key, e);
-            return false;
+            log.error("【删除持久化节点异常】{}", key, e);
         }
+        return false;
     }
 }

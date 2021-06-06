@@ -7,7 +7,6 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs;
-import org.apache.zookeeper.ZooKeeper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -24,8 +23,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class ZkLockService implements LockDomain {
-
-    private ZooKeeper zooKeeper;
 
     @Autowired
     private CuratorFramework client;
